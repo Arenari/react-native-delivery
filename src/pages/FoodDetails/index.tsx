@@ -73,6 +73,18 @@ const FoodDetails: React.FC = () => {
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
+      const { id } = routeParams;
+      const response = await api.get<Food>(`foods/${id}`);
+
+      setFood(response.data);
+      let loadedExtras = response.data.extras;
+      loadedExtras = loadedExtras.map(extra => {
+        if (extra.quantity) {
+          return extra;
+        }
+        return { ...extra, quantity: 0 };
+      });
+      setExtras(loadedExtras);
       // Load a specific food with extras based on routeParams id
     }
 
@@ -80,30 +92,51 @@ const FoodDetails: React.FC = () => {
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
+    const extraIndex = extras.findIndex(extra => extra.id === id);
+    const newExtras = [...extras];
+    newExtras[extraIndex].quantity += 1;
+    setExtras(newExtras);
     // Increment extra quantity
   }
 
   function handleDecrementExtra(id: number): void {
+    const extraIndex = extras.findIndex(extra => extra.id === id);
+    const selectedExtra = extras[extraIndex];
+    if (selectedExtra.quantity > 0) {
+      const newExtras = [...extras];
+      newExtras[extraIndex].quantity -= 1;
+      setExtras(newExtras);
+    }
     // Decrement extra quantity
   }
 
   function handleIncrementFood(): void {
     // Increment food quantity
+    setFoodQuantity(foodQuantity + 1);
   }
 
   function handleDecrementFood(): void {
     // Decrement food quantity
+    if (foodQuantity > 1) setFoodQuantity(foodQuantity - 1);
   }
 
   const toggleFavorite = useCallback(() => {
+    setIsFavorite(!isFavorite);
     // Toggle if food is favorite or not
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
+    const extraTotal = extras.reduce(
+      (sum, extra) => sum + extra.quantity * extra.value,
+      0,
+    );
+    const total = foodQuantity * (extraTotal + food.price);
     // Calculate cartTotal
+    return formatValue(total);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
+    await api.post('orders', { ...food, extras });
     // Finish the order and save on the API
   }
 
